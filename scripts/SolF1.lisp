@@ -3,13 +3,13 @@
 
 ;;; Utilizar estes includes para os testes na versao local
 ;;; comentar antes de submeter
-;(load "datastructures.lisp")
-;(load "auxfuncs.lisp")
+(load "datastructures.lisp")
+(load "auxfuncs.lisp")
 
 ;;; Utilizar estes includes para a versao a submeter
 ; tirar o comentario antes de submeter
-(load "datastructures.fas")
-(load "auxfuncs.fas")
+;(load "datastructures.fas")
+;(load "auxfuncs.fas")
 
 (defun isObstaclep (pos track)
   "check if there is an obstacle at position pos of the track"
