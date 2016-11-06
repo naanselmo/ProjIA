@@ -36,7 +36,7 @@
   "check if the position pos is an obstacle"
   (or (< (pos-l pos) 0) (< (pos-c pos) 0)
       (>= (pos-l pos) (pos-l (track-size track)))
-    (>= (pos-c pos) (pos-c (track-size track)))
+      (>= (pos-c pos) (pos-c (track-size track)))
       (null (getTrackContent pos track))))
 
 ;; Pedir 0,4
