@@ -36,7 +36,7 @@
   "check if the position pos is an obstacle"
   (or (< (pos-l pos) 0) (< (pos-c pos) 0)
       (>= (pos-l pos) (pos-l (track-size track)))
-      (>= (pos-c pos) (pos-c (track-size track)))
+    (>= (pos-c pos) (pos-c (track-size track)))
       (null (getTrackContent pos track))))
 
 ;; Pedir 0,4
@@ -74,7 +74,7 @@
 ;;; Pedir
 (defun nextStates (st)
   "generate all possible next states"
-	(let ((states ()))
+  (let ((states ()))
     (loop for action in (possible-actions) do
       (setf states (cons (nextState st action) states)))
       states))
@@ -85,8 +85,42 @@
      st - initial state
      problem - problem information
      lim - depth limit"
-	(list (make-node :state (problem-initial-state problem))) )
+  (let* ((initial-state (problem-initial-state problem))
+         (initial-node (make-node :state initial-state)))
+    ; Start the recursion, with the initial state in the solutions list.
+    (recursive_limdepthfirstsearch problem initial-node (list initial-state) lim :cutoff? cutoff?)))
 
+(defun recursive_limdepthfirstsearch (problem node solution lim &key cutoff?)
+  "helper function for limdepthfirstsearch"
+  (let ((current-state (node-state node))
+        ; Loop variables
+        (child-node nil)
+        (result nil)
+        (cutoff_occured nil))
+    (cond 
+      ; If the current state is goal, then return the solution we accumulated so far.
+      ((funcall (problem-fn-isGoal problem) current-state) solution)
+      ; If the limit is 0, return the :cutoff? key since we just ran out of dives :(.
+      ; (check with the professor if its this that we have to do)
+      ((zerop lim) cutoff?)
+      ; Else lets do the DFS, LETS DIVEE ONE MORE TIME!! (One more time, I gonna celebrate, Oh yeah, all right, Don't stop the diving)
+      (t 
+        (progn
+          ; Loop through all the possible states from the current state.
+          (dolist (nextState (funcall (problem-fn-nextStates problem) current-state)) 
+            ; Make the node for this nextState, with it's state being the nextState and its parent the current node.
+            (setf child-node (make-node :state nextState :parent node))
+            ; Add the nextState to the solutions list.
+            ; Also decrement the limit by one since we just moved one floor.
+            (setf result (recursive_limdepthfirstsearch problem child-node (append solution (list nextState)) (- lim 1)))
+            ; Check the result!
+            (cond 
+              ; If the result is equal to the :cutoff? key, set the cutoff_occured to true.
+              ((equal result cutoff?) (setf cutoff_occured t)) 
+              ; If the result is not failure, then return the result.
+              ((not (null result)) (return-from recursive_limdepthfirstsearch result))))
+          ; This is out of the loop! If cutoff occurred while we where diving the tree return the :cutoff? key! else return failure (NIL)
+          (if cutoff_occured cutoff? nil))))))
 
 ;iterlimdepthfirstsearch
 (defun iterlimdepthfirstsearch (problem &key (lim most-positive-fixnum))
@@ -94,4 +128,4 @@
      st - initial state
      problem - problem information
      lim - limit of depth iterations"
-	(list (make-node :state (problem-initial-state problem))) )
+	(list (make-node :state (problem-initial-state problem))))
