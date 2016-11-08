@@ -3,7 +3,7 @@
 (load "SolF1.lisp")
 
 (defun state-to-str (st)
-  (format nil "Pos:~a Vel:~a Action:~a Cost:~a"
+  (format nil "Pos:~a Vel:~a Action:~a Cost:~a" 
 	  (state-pos st)
 	  (state-vel st)
 	  (state-action st)
@@ -14,16 +14,16 @@
 
 (defvar st)
 (setf st (make-state :pos (track-startpos *track*)
-		     :vel '(0 1)
+		     :vel '(0 1) 
 		     :action nil
 		     :cost 0
 		     :track *track*))
-
+	  
 (defvar action)
 (setf action '(1 -1))
 
 (defvar prev-goal-state)
-(setf prev-goal-state
+(setf prev-goal-state 
   (make-STATE :POS '(2 13)
 	      :VEL '(0 4)
 	      :ACTION '(1 1)
@@ -32,7 +32,7 @@
 	      :OTHER NIL))
 
 (defvar goal-state)
-(setf goal-state
+(setf goal-state 
   (make-STATE :POS '(3 16)
 	      :VEL '(1 3)
 	      :ACTION '(1 -1)
@@ -42,7 +42,7 @@
 
 
 (defvar non-goal-state)
-(setf non-goal-state
+(setf non-goal-state 
   (make-STATE :POS '(3 6)
 	      :VEL '(-1 2)
 	      :ACTION '(-1 0)
@@ -52,7 +52,7 @@
 
 (defvar obstacle)
 (setf obstacle '(2 2))
-
+    
 (defvar non-obstacle)
 (setf non-obstacle '(2 8))
 
@@ -89,4 +89,6 @@
 		 :direction :input)
   (format t "~% Solution is correct? ~a" (string= (state-to-str (nextState st action)) (read str))))
 
+
 ;;; ===================================================================================================
+

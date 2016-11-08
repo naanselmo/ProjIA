@@ -80,7 +80,7 @@
       states))
 
 ;;; limdepthfirstsearch
-(defun limdepthfirstsearch (problem lim &key cutoff?)
+(defun limdepthfirstsearch (problem lim)
   "limited depth first search
      st - initial state
      problem - problem information
@@ -88,9 +88,9 @@
   (let* ((initial-state (problem-initial-state problem))
          (initial-node (make-node :state initial-state)))
     ; Start the recursion.
-    (recursive_limdepthfirstsearch problem initial-node  lim :cutoff? cutoff?)))
+    (recursive_limdepthfirstsearch problem initial-node  lim)))
 
-(defun recursive_limdepthfirstsearch (problem node lim &key cutoff?)
+(defun recursive_limdepthfirstsearch (problem node lim)
   "helper function for limdepthfirstsearch"
   (let ((current-state (node-state node))
         ; Loop variables
@@ -100,9 +100,9 @@
     (cond 
       ; If the current state is goal, then return the solution we accumulated so far.
       ((funcall (problem-fn-isGoal problem) current-state) (solution node))
-      ; If the limit is 0, return the :cutoff? key since we just ran out of dives :(.
+      ; If the limit is 0, return the 'cutoff since we just ran out of dives :(.
       ; (check with the professor if its this that we have to do)
-      ((zerop lim) cutoff?)
+      ((zerop lim) 'cutoff)
       ; Else lets do the DFS, LETS DIVEE ONE MORE TIME!! (One more time, I gonna celebrate, Oh yeah, all right, Don't stop the diving)
       (t 
         (progn
@@ -115,12 +115,12 @@
             (setf result (recursive_limdepthfirstsearch problem child-node (- lim 1)))
             ; Check the result!
             (cond 
-              ; If the result is equal to the :cutoff? key, set the cutoff_occured to true.
-              ((equal result cutoff?) (setf cutoff_occured t)) 
+              ; If the result is equal to 'cutoff, set the cutoff_occured to true.
+              ((equal result 'cutoff) (setf cutoff_occured t)) 
               ; If the result is not failure, then return the result.
               ((not (null result)) (return-from recursive_limdepthfirstsearch result))))
-          ; This is out of the loop! If cutoff occurred while we where diving the tree return the :cutoff? key! else return failure (NIL)
-          (if cutoff_occured cutoff? nil))))))
+          ; This is out of the loop! If cutoff occurred while we where diving the tree return 'cutoff! else return failure (NIL)
+          (if cutoff_occured 'cutoff nil))))))
 
 (defun solution(node) 
   "reconstructs the solution given the goal node"
