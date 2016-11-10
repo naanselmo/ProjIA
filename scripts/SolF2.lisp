@@ -97,36 +97,36 @@
         (child-node nil)
         (result nil)
         (cutoff_occured nil))
-    (cond 
+    (cond
       ; If the current state is goal, then return the solution we accumulated so far.
       ((funcall (problem-fn-isGoal problem) current-state) (solution node))
       ; If the limit is 0, return the 'cutoff since we just ran out of dives :(.
       ; (check with the professor if its this that we have to do)
       ((zerop lim) 'cutoff)
       ; Else lets do the DFS, LETS DIVEE ONE MORE TIME!! (One more time, I gonna celebrate, Oh yeah, all right, Don't stop the diving)
-      (t 
+      (t
         (progn
           ; Loop through all the possible states from the current state.
-          (dolist (nextState (funcall (problem-fn-nextStates problem) current-state)) 
+          (dolist (nextState (funcall (problem-fn-nextStates problem) current-state))
             ; Make the node for this nextState, with it's state being the nextState and its parent the current node.
             (setf child-node (make-node :state nextState :parent node))
             ; Add the nextState to the solutions list.
             ; Also decrement the limit by one since we just moved one floor.
             (setf result (recursive_limdepthfirstsearch problem child-node (- lim 1)))
             ; Check the result!
-            (cond 
+            (cond
               ; If the result is equal to 'cutoff, set the cutoff_occured to true.
-              ((equal result 'cutoff) (setf cutoff_occured t)) 
+              ((equal result 'cutoff) (setf cutoff_occured t))
               ; If the result is not failure, then return the result.
               ((not (null result)) (return-from recursive_limdepthfirstsearch result))))
           ; This is out of the loop! If cutoff occurred while we where diving the tree return 'cutoff! else return failure (NIL)
           (if cutoff_occured 'cutoff nil))))))
 
-(defun solution(node) 
+(defun solution(node)
   "reconstructs the solution given the goal node"
   (let ((solution-path ()))
-    (loop while (not (null node)) do 
-      (progn 
+    (loop while (not (null node)) do
+      (progn
         (push (node-state node) solution-path)
         (setf node (node-parent node))))
     solution-path))
@@ -138,3 +138,16 @@
      problem - problem information
      lim - limit of depth iterations"
 	(list (make-node :state (problem-initial-state problem))))
+
+(defun iterlimdepthfirstsearch (problem &key (lim most-positive-fixnum))
+  "limited depth first search
+     st - initial state
+     problem - problem information
+     lim - limit of depth iterations"
+  (let* ((iterator 0)
+         (result nil))
+    (loop
+      (setf iterator (+ iterator 1))
+      (when (>= iterator lim) (return nil))
+      (setf result (limdepthfirstsearch problem iterator))
+      (when (not (eq result 'cutoff)) (return result)))))
