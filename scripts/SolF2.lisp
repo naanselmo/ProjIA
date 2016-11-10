@@ -1,5 +1,5 @@
-(load "datastructures.lisp")
-(load "auxfuncs.lisp")
+(load "datastructures.fas")
+(load "auxfuncs.fas")
 
 ;;; TAI position
 (defun make-pos (c l)
@@ -130,14 +130,6 @@
         (push (node-state node) solution-path)
         (setf node (node-parent node))))
     solution-path))
-
-;iterlimdepthfirstsearch
-(defun iterlimdepthfirstsearch (problem &key (lim most-positive-fixnum))
-  "limited depth first search
-     st - initial state
-     problem - problem information
-     lim - limit of depth iterations"
-	(list (make-node :state (problem-initial-state problem))))
 
 (defun iterlimdepthfirstsearch (problem &key (lim most-positive-fixnum))
   "limited depth first search
