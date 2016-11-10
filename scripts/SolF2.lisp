@@ -1,3 +1,12 @@
+;;; Grupo 51: 81900 - Nuno Anselmo, 82047 - Andre Mendes
+
+;;; Utilizar estes includes para os testes na versao local
+;;; comentar antes de submeter
+;(load "datastructures.lisp")
+;(load "auxfuncs.lisp")
+
+;;; Utilizar estes includes para a versao a submeter
+; tirar o comentario antes de submeter
 (load "datastructures.fas")
 (load "auxfuncs.fas")
 
