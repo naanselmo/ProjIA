@@ -1,6 +1,14 @@
+;;; Grupo 51: 81900 - Nuno Anselmo, 82047 - Andre Mendes
+
+;;; Utilizar estes includes para os testes na versao local
+;;; comentar antes de submeter
 (load "datastructures.lisp")
 (load "auxfuncs.lisp")
 
+;;; Utilizar estes includes para a versao a submeter
+; tirar o comentario antes de submeter
+;(load "datastructures.fas")
+;(load "auxfuncs.fas")
 
 ;;; TAI position
 (defun make-pos (c l)
@@ -41,7 +49,7 @@
       (null (getTrackContent pos track))))
 
 ;; Pedir 0,4
-(defun isGoalp (st) 
+(defun isGoalp (st)
   "check if st is a solution of the problem"
   (let ((current-position (state-pos st))
 	(track (state-track st)))
@@ -70,36 +78,102 @@
 
 ;; Solution of phase 2
 
-;;; Pedir 
+;;; Pedir
 (defun nextStates (st)
   "generate all possible next states"
-	(list st))
+  (let ((successors nil))
+    (dolist (act (possible-actions) successors)
+      (let ((new-state (nextState st act)))
+	(if (not (member new-state successors :test #'equalp))
+	    (push new-state successors))))))
 
-;;; limdepthfirstsearch 
-(defun limdepthfirstsearch (problem lim)
+;;; Solucao e uma seq ordenada de estados
+(defun solution (node)
+  (let ((seq-states nil))
+    (loop
+      (when (null node)
+	(return))
+      (push (node-state node) seq-states)
+      (setf node (node-parent node)))
+    (values seq-states)))
+
+
+;;; limdepthfirstsearch
+(defun limdepthfirstsearch (problem lim &key cutoff?)
   "limited depth first search
      st - initial state
      problem - problem information
      lim - depth limit"
-	(list (make-node :state (problem-initial-state problem))) )
-				      
+  (labels ((limdepthfirstsearch-aux (node problem lim)
+	     (if (isGoalp (node-state node))
+		 (solution node)
+		 (if (zerop lim)
+		     :cutoff
+		     (let ((cutoff? nil))
+		       (dolist (new-state (nextStates (node-state node)))
+			 (let* ((new-node (make-node :parent node :state new-state))
+				(res (limdepthfirstsearch-aux new-node problem (1- lim))))
+			   (if (eq res :cutoff)
+			       (setf cutoff? :cutoff)
+			       (if (not (null res))
+				   (return-from limdepthfirstsearch-aux res)))))
+		       (values cutoff?))))))
+    (let ((res (limdepthfirstsearch-aux (make-node :parent nil :state (problem-initial-state problem))
+					problem
+					lim)))
+      (if (eq res :cutoff)
+	  (if cutoff?
+	      :cutoff
+	      nil)
+	  res))))
+
 
 ;iterlimdepthfirstsearch
-(defun iterlimdepthfirstsearch (problem)
+(defun iterlimdepthfirstsearch (problem &key (lim most-positive-fixnum))
   "limited depth first search
      st - initial state
      problem - problem information
      lim - limit of depth iterations"
-	(list (make-node :state (problem-initial-state problem))) )
-	
+  (let ((i 0))
+    (loop
+      (let ((res (limdepthfirstsearch problem i :cutoff? T)))
+	(when (and res (not (eq res :cutoff)))
+	  (return res))
+	(incf i)
+	(if (> i lim)
+	    (return nil))))))
+
 ;; Solution of phase 3
 
 ;; Heuristic
 (defun compute-heuristic (st)
 	0)
-	  
-  
-	    
+
 ;;; A*
 (defun a* (problem)
-  (list (make-node :state (problem-initial-state problem))))
+  (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (funcall (problem-fn-h problem) (problem-initial-state problem)) :g 0 :h (funcall (problem-fn-h problem) (problem-initial-state problem)))))
+        (closedNodes nil))
+    (loop while openNodes do
+      (let ((expandedNode (car openNodes)))
+        (if (funcall (problem-fn-isGoal problem) (node-state expandedNode))
+          (return (solution expandedNode))
+        )
+        (setf openNodes (cdr openNodes))
+        (setf closedNodes (cons expandedNode closedNodes))
+        (loop for nextState in (funcall (problem-fn-nextStates problem) (node-state expandedNode)) do
+          (let ((nextNode (make-node :parent expandedNode :state nextState :f (+ (+ (node-g expandedNode) (state-cost nextState)) (funcall (problem-fn-h problem) nextState)) :g (+ (node-g expandedNode) (state-cost nextState)) :h (funcall (problem-fn-h problem) nextState))))
+            (if (not (member nextNode closedNodes :key #'node-state))
+              (let ((match (position nextNode openNodes :key #'node-state)))
+                (if (null match)
+                  (setf openNodes (cons nextNode openNodes))
+                  (setf (nth match openNodes) nextNode)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+  (return nil)
+)
