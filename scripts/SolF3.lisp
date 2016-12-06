@@ -2,13 +2,13 @@
 
 ;;; Utilizar estes includes para os testes na versao local
 ;;; comentar antes de submeter
-(load "datastructures.lisp")
-(load "auxfuncs.lisp")
+;(load "datastructures.lisp")
+;(load "auxfuncs.lisp")
 
 ;;; Utilizar estes includes para a versao a submeter
 ; tirar o comentario antes de submeter
-;(load "datastructures.fas")
-;(load "auxfuncs.fas")
+(load "datastructures.fas")
+(load "auxfuncs.fas")
 
 ;;; TAI position
 (defun make-pos (c l)
@@ -151,40 +151,35 @@
 
 ;;; A*
 (defun a* (problem)
-  (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (funcall (problem-fn-h problem) (problem-initial-state problem)) :g 0 :h (funcall (problem-fn-h problem) (problem-initial-state problem)))))
-        (closedNodes nil))
+  (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (funcall (problem-fn-h problem) (problem-initial-state problem)) :g 0 :h (funcall (problem-fn-h problem) (problem-initial-state problem))))))
     (loop while openNodes do
       (let ((expandedNode (car openNodes)))
         (if (funcall (problem-fn-isGoal problem) (node-state expandedNode))
           (let ((result (solution expandedNode)))
-            ;(print result)
+            (print result)
             (return-from a* result)
           )
         )
         (setf openNodes (cdr openNodes))
-        (setf closedNodes (cons expandedNode closedNodes))
         (loop for nextState in (funcall (problem-fn-nextStates problem) (node-state expandedNode)) do
-          (let ((nextNode (make-node :parent expandedNode :state nextState :f (+ (+ (node-g expandedNode) (state-cost nextState)) (funcall (problem-fn-h problem) nextState)) :g (+ (node-g expandedNode) (state-cost nextState)) :h (funcall (problem-fn-h problem) nextState))))
-            (if (null (member (node-state nextNode) closedNodes :key #'node-state))
-              (let ((match (position (node-state nextNode) openNodes :key #'node-state)))
-                (if (null match)
-                  (let ((pos (position (node-f nextNode) openNodes :key #'node-f :test #'<)))
-                    (case pos
-                      ('nil
-                        (if (null openNodes)
-                          (setf openNodes (list nextNode))
-                          (nconc openNodes (list nextNode))
-                        )
-                      )
-                      (0 (setf openNodes (cons nextNode openNodes)))
-                      (otherwise
-                        (let ((temp (nthcdr (- pos 1) openNodes)))
-                          (rplacd temp (cons nextNode (cdr temp)))
-                        )
-                      )
-                    )
-                  )
-                  (setf (nth match openNodes) nextNode)
+          (let*
+            (
+              (g (+ (node-g expandedNode) (state-cost nextState)))
+              (h 0)
+              (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
+              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<))
+            )
+            (case pos
+              ('nil
+                (if (null openNodes)
+                  (setf openNodes (list nextNode))
+                  (nconc openNodes (list nextNode))
+                )
+              )
+              (0 (setf openNodes (cons nextNode openNodes)))
+              (otherwise
+                (let ((temp (nthcdr (- pos 1) openNodes)))
+                  (rplacd temp (cons nextNode (cdr temp)))
                 )
               )
             )
@@ -194,4 +189,50 @@
     )
   )
   (return-from a* nil)
+)
+
+(defun best-heuristic (st)
+  (let ((bestVertical 0) (bestHorizontal 0))
+    (return-from best-heuristic (max bestVertical bestHorizontal))
+  )
+)
+
+(defun best-search (problem)
+  (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (best-heuristic (problem-initial-state problem)) :g 0 :h (best-heuristic (problem-initial-state problem))))))
+    (loop while openNodes do
+      (let ((expandedNode (car openNodes)))
+        (if (funcall (problem-fn-isGoal problem) (node-state expandedNode))
+          (let ((result (solution expandedNode)))
+            (return-from best-search result)
+          )
+        )
+        (setf openNodes (cdr openNodes))
+        (loop for nextState in (funcall (problem-fn-nextStates problem) (node-state expandedNode)) do
+          (let*
+            (
+              (g (+ (node-g expandedNode) (state-cost nextState)))
+              (h (best-heuristic nextState))
+              (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
+              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<))
+            )
+            (case pos
+              ('nil
+                (if (null openNodes)
+                  (setf openNodes (list nextNode))
+                  (nconc openNodes (list nextNode))
+                )
+              )
+              (0 (setf openNodes (cons nextNode openNodes)))
+              (otherwise
+                (let ((temp (nthcdr (- pos 1) openNodes)))
+                  (rplacd temp (cons nextNode (cdr temp)))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+  (return-from best-search nil)
 )
