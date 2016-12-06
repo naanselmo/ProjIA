@@ -95,10 +95,59 @@
 ;; Solution of phase 3
 
 ;; Heuristic
+(defun getEnvContent (pos env)
+  (nth (pos-c pos) (nth (pos-l pos) env)))
+
+(defun setEnvContent (pos env val)
+  (setf (nth (pos-c pos) (nth (pos-l pos) env)) val))
+
+(defun neighbourPositions (pos) 
+  (let ((neighbours ())
+        (actions '((0 1) (1 0) (-1 0) (0 -1) (1 -1) (-1 1) (1 1) (-1 -1))))
+    (dolist (action actions) 
+      (setf neighbours (append neighbours (list (make-pos (+ (pos-l pos) (pos-l action)) (+ (pos-c pos) (pos-c action)))))))
+    neighbours))
+
+(defun fill-environment (track) 
+  (let ((env (copy-tree (track-env track)))
+        (queue ())
+        (trackSize (track-size track))
+        (currentPos nil)
+        (currentDistance 0))
+    ; Set all goals to 0 and add them to the open list.
+    (dolist (goalPos (track-endpositions track)) 
+      (progn 
+        (setEnvContent goalPos env 0)
+        (setf queue (append queue (list goalPos)))))
+    ; First make all NIL's M
+    (loop for row from 0 below (pos-l trackSize) do 
+      (loop for column from 0 below (pos-c trackSize) do 
+        (setf currentPos (make-pos row column))
+        (if (null (getEnvContent currentPos env)) 
+          (setEnvContent currentPos env most-positive-fixnum))))
+    ; While queue is not empty find all T and NIL neighbours and set their distances accodingly
+    (loop while queue do 
+      (setf currentPos (pop queue))
+      (setf currentDistance (getEnvContent currentPos env))
+      (dolist (neighbour (neighbourPositions currentPos)) 
+        (if (eq (getEnvContent neighbour env) T) 
+          (progn 
+            (setEnvContent neighbour env (+ currentDistance 1))
+            (setf queue (append queue (list neighbour)))))))
+    env))
+
+; Keeps track of the heuristic environment and the track that its representing, 
+; so whenever we change track, the heuristic environment gets calculated again.
+; (heuristic enviroment, track)
+(defparameter *heuristic-table* '(nil nil))
 (defun compute-heuristic (st)
-	0)
-	  
-  
+	(let ((track (state-track st)))
+    (if (not (eq track (second *heuristic-table*)))
+      (progn 
+        (format t "Generating!")
+        (setf (second *heuristic-table*) track)
+        (setf (first *heuristic-table*) (fill-environment track))))
+    (getEnvContent (state-pos st) (first *heuristic-table*))))
 	    
 ;;; A*
 (defun a* (problem)
