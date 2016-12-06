@@ -225,7 +225,7 @@
               (g (+ (node-g expandedNode) (state-cost nextState)))
               (h (funcall (problem-fn-h problem) nextState))
               (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
-              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<))
+              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<=))
             )
             (case pos
               ('nil
@@ -271,7 +271,7 @@
               (g (+ (node-g expandedNode) (state-cost nextState)))
               (h (best-heuristic nextState))
               (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
-              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<))
+              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<=))
             )
             (case pos
               ('nil
