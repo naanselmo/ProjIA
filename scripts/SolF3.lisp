@@ -246,17 +246,20 @@
 
 (defun best-search (problem)
   (let ((queuedNodes (list (make-node :state (problem-initial-state problem)))) (visited (list (state-pos (problem-initial-state problem)) (state-vel (problem-initial-state problem)))))
-    (loop while queuedNodes do
-      (let ((expandedNode (pop queuedNodes)))
-        (loop for nextState in (nextStates (node-state expandedNode)) do
-          (if (not (member (list (state-pos nextState) (state-vel nextState)) visited :test #'equal))
-            (let ((nextNode (make-node :parent expandedNode :state nextState)))
-              (nconc visited (list (list (state-pos nextState) (state-vel nextState))))
-              (if (isGoalp (node-state nextNode))
-                (let ((result (solution nextNode)))
-                  (print (list-length result))
-                  (return-from best-search result))
-                (if (null queuedNodes)
-                  (setf queuedNodes (list nextNode))
-                  (nconc queuedNodes (list nextNode))))))))))
+    (if (isGoalp (problem-initial-state problem))
+      (let ((result (solution (make-node :state (problem-initial-state problem)))))
+        (return-from best-search result))
+      (loop while queuedNodes do
+        (let ((expandedNode (pop queuedNodes)))
+          (loop for nextState in (nextStates (node-state expandedNode)) do
+            (if (not (member (list (state-pos nextState) (state-vel nextState)) visited :test #'equal))
+              (let ((nextNode (make-node :parent expandedNode :state nextState)))
+                (nconc visited (list (list (state-pos nextState) (state-vel nextState))))
+                (if (isGoalp (node-state nextNode))
+                  (let ((result (solution nextNode)))
+                    (print (list-length result))
+                    (return-from best-search result))
+                  (if (null queuedNodes)
+                    (setf queuedNodes (list nextNode))
+                    (nconc queuedNodes (list nextNode)))))))))))
   (return-from best-search nil))
