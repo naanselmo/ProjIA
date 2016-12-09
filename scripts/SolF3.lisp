@@ -199,6 +199,8 @@
     (getEnvContent (state-pos st) (first *heuristic-table*))))
 
 ;;; A*
+; Regular A* search: during each iteration, expand the node with the lowest f
+; Keep a sorted list containing all the nodes, sorted by f
 (defun a* (problem)
   (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (funcall (problem-fn-h problem) (problem-initial-state problem)) :g (state-cost (problem-initial-state problem)) :h (funcall (problem-fn-h problem) (problem-initial-state problem))))))
     (loop while openNodes do
@@ -244,17 +246,21 @@
 ; (defun distance-to-turns (d)
 ;   (/ (- (sqrt (+ (* 8 d) 1)) 1) 2))
 
+; Breadth-first Search
+; Consider all states of the form (px, py, vx, vy), px and py being positions in x and y, vx and vx being velocities in x and y
+; Discard any repeated state, as if a state has already been discovered, then the route to it is optimal
+; Store all the states in a hashtable to make it easier to check for repeated states
 (defun best-search (problem)
-  (let ((queuedNodes (list (make-node :state (problem-initial-state problem)))) (visited (list (state-pos (problem-initial-state problem)) (state-vel (problem-initial-state problem)))))
+  (let ((queuedNodes (list (make-node :state (problem-initial-state problem)))) (visited (make-hash-table :test #'equal)))
     (if (isGoalp (problem-initial-state problem))
       (let ((result (solution (make-node :state (problem-initial-state problem)))))
         (return-from best-search result))
       (loop while queuedNodes do
         (let ((expandedNode (pop queuedNodes)))
           (loop for nextState in (nextStates (node-state expandedNode)) do
-            (if (not (member (list (state-pos nextState) (state-vel nextState)) visited :test #'equal))
+            (if (not (gethash (list (state-pos nextState) (state-vel nextState)) visited))
               (let ((nextNode (make-node :parent expandedNode :state nextState)))
-                (nconc visited (list (list (state-pos nextState) (state-vel nextState))))
+                (setf (gethash (list (state-pos nextState) (state-vel nextState)) visited) T)
                 (if (isGoalp (node-state nextNode))
                   (let ((result (solution nextNode)))
                     (print (list-length result))
