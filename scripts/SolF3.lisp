@@ -145,23 +145,28 @@
 
 ;; Solution of phase 3
 
-;; Heuristic
 (defun getEnvContent (pos env)
+  "Gets the value of a given position in a given 2D array"
   (aref env (pos-l pos) (pos-c pos)))
 
 (defun setEnvContent (pos env val)
+  "Sets the value of a given position in a given 2D array"
   (setf (aref env (pos-l pos) (pos-c pos)) val))
 
 (defun neighbourPositions (pos)
+  "Gets all neighbours positios of a given position"
   (let ((neighbours ())
-        (actions '((0 1) (1 0) (-1 0) (0 -1) (1 -1) (-1 1) (1 1) (-1 -1))))
+        ; Fetch all actions except the first one (The (0, 0) one, since we dont want to stay in the same spot while filling)
+        (actions (cdr (possible-actions))))
     (dolist (action actions)
       (setf neighbours (append neighbours (list (make-pos (+ (pos-l pos) (pos-l action)) (+ (pos-c pos) (pos-c action)))))))
     neighbours))
 
 (defun fill-environment (track)
+  "Generates the heuristic array with a BFS flood fill approach"
   (let* ((queue ())
         (trackSize (track-size track))
+        ; Make the array, with the env as initial contents
         (env (make-array trackSize :initial-contents (track-env track)))
         (currentPos nil)
         (currentDistance 0))
@@ -180,6 +185,8 @@
       (setf currentPos (pop queue))
       (setf currentDistance (getEnvContent currentPos env))
       (dolist (neighbour (neighbourPositions currentPos))
+        ; If its a bit of path walkable path that wasn't yet calulated just set it as the cost of the currentPos + 1
+        ; And append it to the open nodes so it gets expanded later.
         (if (eq (getEnvContent neighbour env) T)
           (progn
             (setEnvContent neighbour env (+ currentDistance 1))
@@ -190,12 +197,18 @@
 ; so whenever we change track, the heuristic environment gets calculated again.
 ; (heuristic enviroment, track)
 (defparameter *heuristic-table* '(nil nil))
+;; Heuristic
 (defun compute-heuristic (st)
-	(let ((track (state-track st)))
+  "Computes the heuristic for a given state"
+  (let ((track (state-track st)))
+  ; First time called on a new track will take longer since it will calculater everything, so it doesn't have to calculate it again!
     (if (not (eq track (second *heuristic-table*)))
       (progn
+        ; Keep track of the track! (Second position)
         (setf (second *heuristic-table*) track)
+        ; And keep track of the newly filled table :) (First position)
         (setf (first *heuristic-table*) (fill-environment track))))
+    ; Just fetch the result from the array so it is SUPAHH FASTT!
     (getEnvContent (state-pos st) (first *heuristic-table*))))
 
 ;;; A*
