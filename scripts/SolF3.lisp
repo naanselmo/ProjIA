@@ -7,8 +7,8 @@
 
 ;;; Utilizar estes includes para a versao a submeter
 ; tirar o comentario antes de submeter
-(load "datastructures.lisp")
-(load "auxfuncs.lisp")
+(load "datastructures.fas")
+(load "auxfuncs.fas")
 
 ;;; TAI position
 (defun make-pos (c l)
@@ -159,14 +159,14 @@
       (setf neighbours (append neighbours (list (make-pos (+ (pos-l pos) (pos-l action)) (+ (pos-c pos) (pos-c action)))))))
     neighbours))
 
-(defun fill-environment (track) 
+(defun fill-environment (track)
   (let* ((queue ())
         (trackSize (track-size track))
         (env (make-array trackSize :initial-contents (track-env track)))
         (currentPos nil)
         (currentDistance 0))
     ; Set all goals to 0 and add them to the open list.
-    (dolist (goalPos (track-endpositions track)) 
+    (dolist (goalPos (track-endpositions track))
         (setEnvContent goalPos env 0)
         (setf queue (append queue (list goalPos))))
     ; First make all NIL's M
@@ -229,8 +229,12 @@
 ; Where m is the number of turns needed to travel d if starting velocity is v
 ; Clever maths show that the answer can be given by (after rounding):
 ; m = 1/2 (-1 - 2*v + sqrt(1 + 8*d + 4*v + 4*v^2))
-(defun fast-number-loops (v d)
-  (ceiling (* (/ 1 2) (+ -1 (* -2 v) (sqrt (+ 1 (* 8 d) (* 4 v) (* 4 v v)))))))
+(defparameter *heuristic-hashtable* (make-hash-table))
+(defun fast-number-loops (d v)
+  (let ((heur (gethash d *heuristic-hashtable*)))
+    (if heur
+      heur
+      (setf (gethash d *heuristic-hashtable*) (ceiling (* (/ 1 2) (+ -1 (* -2 v) (sqrt (+ 1 (* 8 d) (* 4 v) (* 4 v v))))))))))
 
 ; Find the stopping distance if travelling at speed v and you can slow down 1 per "turn"
 (defun espaco-travar (v)
@@ -254,54 +258,49 @@
   (let ((pos (state-pos state)) (velocity (state-vel state)) (distance (compute-heuristic state)))
     (return-from fast-optimal-heuristic (max (fast-number-loops (first velocity) (abs (- distance (first pos)))) (fast-number-loops (second velocity) (abs (- distance (second pos))))))))
 
+(defun compute-heuristic-pos (pos)
+    (getEnvContent pos (first *heuristic-table*)))
+
 (defun best-heuristic (state)
-  (- (compute-heuristic state) (abs (first (state-vel state))) (abs (second (state-vel state)))))
+  (fast-number-loops (compute-heuristic state) (+ (abs (first (state-vel state))) (abs (second (state-vel state))))))
+
+(defun distance-to-turns (d)
+  (ceiling (- (sqrt (+ (* 8 d) 1)) 1)))
+
+(defun recompute-heuristic ()
+  (let* ((arr (first *heuristic-table*)) (size (array-dimensions arr)))
+    (loop for row from 0 below (first size) do
+      (loop for column from 0 below (second size) do
+        (if (< (getEnvContent (make-pos row column) arr) most-positive-fixnum)
+          (setEnvContent (make-pos row column) arr (distance-to-turns (getEnvContent (make-pos row column) arr))))))))
 
 (defun best-search (problem)
+  (recompute-heuristic)
+  (print 'DONE-RECALC)
   (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (compute-heuristic (problem-initial-state problem)) :g 0 :h (compute-heuristic (problem-initial-state problem))))))
     (loop while openNodes do
       (let ((expandedNode (car openNodes)))
         (if (isGoalp (node-state expandedNode))
           (let ((result (solution expandedNode)))
+            (print (list-length result))
             (return-from best-search result)))
         (setf openNodes (cdr openNodes))
         (loop for nextState in (nextStates (node-state expandedNode)) do
-          (let* (
-              (g (+ (node-g expandedNode) (state-cost nextState)))
-              (h (compute-heuristic nextState))
-              (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
-              (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<=)))
-            (case pos
-              ('nil
-                (if (null openNodes)
-                  (setf openNodes (list nextNode))
-                  (nconc openNodes (list nextNode))))
-              (0 (setf openNodes (cons nextNode openNodes)))
-              (otherwise
-                (let ((temp (nthcdr (- pos 1) openNodes)))
-                  (rplacd temp (cons nextNode (cdr temp)))))))))))
+          (if (and (< (state-cost nextState) 2) (not (member nextState openNodes :key #'node-state)))
+            (let ((h (compute-heuristic nextState)))
+              (if (<= h (node-h expandedNode))
+                (let* (
+                    (g (+ (node-g expandedNode) (state-cost nextState)))
+                    (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
+                    (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<)))
+                  (if (<= h (node-h expandedNode))
+                    (case pos
+                      ('nil
+                        (if (null openNodes)
+                          (setf openNodes (list nextNode))
+                          (nconc openNodes (list nextNode))))
+                      (0 (setf openNodes (cons nextNode openNodes)))
+                      (otherwise
+                        (let ((temp (nthcdr (- pos 1) openNodes)))
+                          (rplacd temp (cons nextNode (cdr temp)))))))))))))))
   (return-from best-search nil))
-
-(defun recursive-local-search (problem)
-  (let ((expandedNode (make-node :state (problem-initial-state problem) :f (compute-heuristic (problem-initial-state problem)) :g 0 :h (compute-heuristic (problem-initial-state problem)))))
-    (let ((result (recursive-local-search-aux expandedNode)))
-      (if (not (null result))
-        (let ((result (solution expandedNode)))
-          (print result)
-          (return-from recursive-local-search result)))))
-  (return-from recursive-local-search nil))
-
-(defun recursive-local-search-aux (node)
-  (if (isGoalp (node-state node))
-    (return-from recursive-local-search-aux node))
-  (loop for nextState in (nextStates (node-state node)) do
-    (if (and (<= (abs (first (state-vel nextState))) 1) (<= (abs (second (state-vel nextState))) 1))
-      (let* (
-          (g (+ (node-g node) (state-cost nextState)))
-          (h (compute-heuristic nextState))
-          (nextNode (make-node :parent node :state nextState :f (+ g h) :g g :h h)))
-        (if (= (node-f nextNode) (node-f node))
-          (let ((res (recursive-local-search-aux nextNode)))
-            (if (not (null res))
-              (return-from recursive-local-search-aux nextNode)))))))
-  (return-from recursive-local-search-aux nil))
