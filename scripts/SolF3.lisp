@@ -147,10 +147,10 @@
 
 ;; Heuristic
 (defun getEnvContent (pos env)
-  (nth (pos-c pos) (nth (pos-l pos) env)))
+  (aref env (pos-l pos) (pos-c pos)))
 
 (defun setEnvContent (pos env val)
-  (setf (nth (pos-c pos) (nth (pos-l pos) env)) val))
+  (setf (aref env (pos-l pos) (pos-c pos)) val))
 
 (defun neighbourPositions (pos) 
   (let ((neighbours ())
@@ -160,16 +160,15 @@
     neighbours))
 
 (defun fill-environment (track) 
-  (let ((env (copy-tree (track-env track)))
-        (queue ())
+  (let* ((queue ())
         (trackSize (track-size track))
+        (env (make-array trackSize :initial-contents (track-env track)))
         (currentPos nil)
         (currentDistance 0))
     ; Set all goals to 0 and add them to the open list.
     (dolist (goalPos (track-endpositions track)) 
-      (progn 
         (setEnvContent goalPos env 0)
-        (setf queue (append queue (list goalPos)))))
+        (setf queue (append queue (list goalPos))))
     ; First make all NIL's M
     (loop for row from 0 below (pos-l trackSize) do 
       (loop for column from 0 below (pos-c trackSize) do 
