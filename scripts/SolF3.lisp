@@ -229,78 +229,34 @@
 ; Where m is the number of turns needed to travel d if starting velocity is v
 ; Clever maths show that the answer can be given by (after rounding):
 ; m = 1/2 (-1 - 2*v + sqrt(1 + 8*d + 4*v + 4*v^2))
-(defparameter *heuristic-hashtable* (make-hash-table))
-(defun fast-number-loops (d v)
-  (let ((heur (gethash d *heuristic-hashtable*)))
-    (if heur
-      heur
-      (setf (gethash d *heuristic-hashtable*) (ceiling (* (/ 1 2) (+ -1 (* -2 v) (sqrt (+ 1 (* 8 d) (* 4 v) (* 4 v v))))))))))
+; (defparameter *heuristic-hashtable* (make-hash-table))
+; (defun fast-number-loops (d v)
+;   (let ((heur (gethash d *heuristic-hashtable*)))
+;     (if heur
+;       heur
+;       (setf (gethash d *heuristic-hashtable*) (ceiling (* (/ 1 2) (+ -1 (* -2 v) (sqrt (+ 1 (* 8 d) (* 4 v) (* 4 v v))))))))))
 
 ; Find the stopping distance if travelling at speed v and you can slow down 1 per "turn"
-(defun espaco-travar (v)
-  (/ (* (- (abs v) 1) v) 2))
-
-(defun pos-travar (p v)
-  (list (+ (first p) (espaco-travar (first v))) (+ (second p) (espaco-travar (second v)))))
-
-(defun closest-x-y (pos objectives)
-  (let ((min-x most-positive-fixnum) (min-y most-positive-fixnum))
-    (dolist (obj objectives)
-      (setf min-x (min min-x (abs (- (first obj) (first pos)))))
-      (setf min-y (min min-y (abs (- (second obj) (second pos))))))
-    (return-from closest-x-y (list min-x min-y))))
-
-(defun optimal-heuristic (state)
-  (let* ((pos (state-pos state)) (velocity (state-vel state)) (objectives (track-endpositions (state-track state))) (distance (closest-x-y (pos-travar pos velocity) objectives)))
-    (return-from optimal-heuristic (max (fast-number-loops (first velocity) (abs (- (first distance) (first pos)))) (fast-number-loops (second velocity) (abs (- (second distance) (second pos))))))))
-
-(defun fast-optimal-heuristic (state)
-  (let ((pos (state-pos state)) (velocity (state-vel state)) (distance (compute-heuristic state)))
-    (return-from fast-optimal-heuristic (max (fast-number-loops (first velocity) (abs (- distance (first pos)))) (fast-number-loops (second velocity) (abs (- distance (second pos))))))))
-
-(defun compute-heuristic-pos (pos)
-    (getEnvContent pos (first *heuristic-table*)))
-
-(defun best-heuristic (state)
-  (fast-number-loops (compute-heuristic state) (+ (abs (first (state-vel state))) (abs (second (state-vel state))))))
-
-(defun distance-to-turns (d)
-  (ceiling (- (sqrt (+ (* 8 d) 1)) 1)))
-
-(defun recompute-heuristic ()
-  (let* ((arr (first *heuristic-table*)) (size (array-dimensions arr)))
-    (loop for row from 0 below (first size) do
-      (loop for column from 0 below (second size) do
-        (if (< (getEnvContent (make-pos row column) arr) most-positive-fixnum)
-          (setEnvContent (make-pos row column) arr (distance-to-turns (getEnvContent (make-pos row column) arr))))))))
+; (defun espaco-travar (v)
+;   (/ (* (- (abs v) 1) v) 2))
+;
+; Find how long it takes to travel a distance d if initial speed is 0
+; (defun distance-to-turns (d)
+;   (/ (- (sqrt (+ (* 8 d) 1)) 1) 2))
 
 (defun best-search (problem)
-  (recompute-heuristic)
-  (print 'DONE-RECALC)
-  (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (compute-heuristic (problem-initial-state problem)) :g 0 :h (compute-heuristic (problem-initial-state problem))))))
-    (loop while openNodes do
-      (let ((expandedNode (car openNodes)))
-        (if (isGoalp (node-state expandedNode))
-          (let ((result (solution expandedNode)))
-            (print (list-length result))
-            (return-from best-search result)))
-        (setf openNodes (cdr openNodes))
+  (let ((queuedNodes (list (make-node :state (problem-initial-state problem)))) (visited (list (state-pos (problem-initial-state problem)) (state-vel (problem-initial-state problem)))))
+    (loop while queuedNodes do
+      (let ((expandedNode (pop queuedNodes)))
         (loop for nextState in (nextStates (node-state expandedNode)) do
-          (if (and (< (state-cost nextState) 2) (not (member nextState openNodes :key #'node-state)))
-            (let ((h (compute-heuristic nextState)))
-              (if (<= h (node-h expandedNode))
-                (let* (
-                    (g (+ (node-g expandedNode) (state-cost nextState)))
-                    (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
-                    (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<)))
-                  (if (<= h (node-h expandedNode))
-                    (case pos
-                      ('nil
-                        (if (null openNodes)
-                          (setf openNodes (list nextNode))
-                          (nconc openNodes (list nextNode))))
-                      (0 (setf openNodes (cons nextNode openNodes)))
-                      (otherwise
-                        (let ((temp (nthcdr (- pos 1) openNodes)))
-                          (rplacd temp (cons nextNode (cdr temp)))))))))))))))
+          (if (not (member (list (state-pos nextState) (state-vel nextState)) visited :test #'equal))
+            (let ((nextNode (make-node :parent expandedNode :state nextState)))
+              (nconc visited (list (list (state-pos nextState) (state-vel nextState))))
+              (if (isGoalp (node-state nextNode))
+                (let ((result (solution nextNode)))
+                  (print (list-length result))
+                  (return-from best-search result))
+                (if (null queuedNodes)
+                  (setf queuedNodes (list nextNode))
+                  (nconc queuedNodes (list nextNode))))))))))
   (return-from best-search nil))
