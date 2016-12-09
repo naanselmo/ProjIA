@@ -205,16 +205,21 @@
   (let ((openNodes (list (make-node :state (problem-initial-state problem) :f (funcall (problem-fn-h problem) (problem-initial-state problem)) :g (state-cost (problem-initial-state problem)) :h (funcall (problem-fn-h problem) (problem-initial-state problem))))))
     (loop while openNodes do
       (let ((expandedNode (car openNodes)))
+        ; Test on expansion. Only on expansion is the shortest path guaranteed to have been found (if the heuristic is admissible)
+        ; If the test was on generation, there could be an undiscovered path that was much better, leading to wrong results
         (if (funcall (problem-fn-isGoal problem) (node-state expandedNode))
           (let ((result (solution expandedNode)))
             (return-from a* result)))
         (setf openNodes (cdr openNodes))
+        ; For each state that can be reached from this one, calculate its f and add it to the list
         (loop for nextState in (funcall (problem-fn-nextStates problem) (node-state expandedNode)) do
           (let* (
               (g (+ (node-g expandedNode) (state-cost nextState)))
               (h (funcall (problem-fn-h problem) nextState))
               (nextNode (make-node :parent expandedNode :state nextState :f (+ g h) :g g :h h))
               (pos (position (node-f nextNode) openNodes :key #'node-f :test #'<=)))
+            ; pos contains the location the node should be placed, in the list, for it to remain sorted by f
+            ; nil and 0 need to be handled carefully since they represent extremes on the list
             (case pos
               ('nil
                 (if (null openNodes)
@@ -255,15 +260,19 @@
     (if (isGoalp (problem-initial-state problem))
       (let ((result (solution (make-node :state (problem-initial-state problem)))))
         (return-from best-search result))
+      ; While the queue isn't empty, there are nodes that need to be expanded
       (loop while queuedNodes do
         (let ((expandedNode (pop queuedNodes)))
           (loop for nextState in (nextStates (node-state expandedNode)) do
+            ; Make sure the node hasn't been visited yet
             (if (not (gethash (list (state-pos nextState) (state-vel nextState)) visited))
               (let ((nextNode (make-node :parent expandedNode :state nextState)))
                 (setf (gethash (list (state-pos nextState) (state-vel nextState)) visited) T)
+                ; Test on generation. This is valid since there can be no better path than the one already discovered
                 (if (isGoalp (node-state nextNode))
                   (let ((result (solution nextNode)))
                     (return-from best-search result))
+                  ; Add it to the list using nconc, but create a new list if it is empty (nconc on constants is disastrous)
                   (if (null queuedNodes)
                     (setf queuedNodes (list nextNode))
                     (nconc queuedNodes (list nextNode)))))))))))
