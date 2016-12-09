@@ -263,7 +263,6 @@
                 (setf (gethash (list (state-pos nextState) (state-vel nextState)) visited) T)
                 (if (isGoalp (node-state nextNode))
                   (let ((result (solution nextNode)))
-                    (print (list-length result))
                     (return-from best-search result))
                   (if (null queuedNodes)
                     (setf queuedNodes (list nextNode))
