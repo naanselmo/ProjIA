@@ -278,7 +278,7 @@
         (let ((expandedNode (pop queuedNodes)))
           (loop for nextState in (nextStates (node-state expandedNode)) do
             ; Make sure the node hasn't been visited yet
-            (if (not (gethash (list (state-pos nextState) (state-vel nextState)) visited))
+            (if (and (< (state-cost nextState) 2) (not (gethash (list (state-pos nextState) (state-vel nextState)) visited)))
               (let ((nextNode (make-node :parent expandedNode :state nextState)))
                 (setf (gethash (list (state-pos nextState) (state-vel nextState)) visited) T)
                 ; Test on generation. This is valid since there can be no better path than the one already discovered
